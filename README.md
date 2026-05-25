@@ -4,7 +4,7 @@ RekindleSketch is a memory-efficient data structure for detecting and tracking p
 
 ## Overview
 
-RekindleSketch implements a sketch-based algorithm for identifying persistent flows that remain active across multiple time windows. It uses a memory-efficient design with configurable memory constraints and provides accurate persist ence estimation.
+RekindleSketch implements a sketch-based algorithm for identifying persistent flows that remain active across multiple time windows. It uses a memory-efficient design with configurable memory constraints and provides accurate persistence estimation.
 
 ## Features
 
@@ -59,7 +59,7 @@ Edit `parm.h` to configure:
 2. Ensure CSV files follow the required format (see Data Format below)
 3. Build and run:
    ```bash
-   ./RekindleSketch_1_14
+   ./RekindleSketch
    ```
 
 ## Data Format
