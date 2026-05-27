@@ -78,7 +78,7 @@ Edit `parm.h` to configure:
 RekindleSketch uses:
 - **Memory score**: Tracks flow activity with exponential decay
 - **Time-awareness**: Detects recent persistent flows over the latest R windows
-- **Probabilistic replacement**: Handles hash collisions with p = \frac{1}{\max(1, Z - R_{h(f)k}.D) \times \hat{S} + 1}
+- **Probabilistic replacement**: Handles hash collisions with replacement probability
 
 ## License
 
