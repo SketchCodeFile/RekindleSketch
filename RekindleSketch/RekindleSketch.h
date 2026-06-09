@@ -3,6 +3,8 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
+#include <cstdio>
 #include <deque>
 #include <memory>
 #include <random>
@@ -16,6 +18,15 @@
 
 
 class RekindleSketch {
+public:
+    struct SlidingWindowResult {
+        int start_window;
+        int end_window;
+        std::vector<std::string> persistent_flows;
+
+        SlidingWindowResult(int start, int end) : start_window(start), end_window(end) {}
+    };
+
 public:
     // Constructor with memory-based configuration
     RekindleSketch(int custom_m, size_t total_memory_bytes, size_t cell_size = 16,
@@ -38,7 +49,7 @@ public:
 
     // Update sketch with a flow
     bool update(const std::string& flow_id);
-    bool update_by_fingerprint(uint16_t fingerprint);
+    bool update_by_fingerprint(uint32_t fingerprint);
 
     // Update multiple flows for current window
     void update_window(const std::vector<std::string>& flows);
@@ -48,16 +59,16 @@ public:
 
     // Query functions
     double query(const std::string& flow_id);
-    double query_by_fingerprint(uint16_t fingerprint);
+    double query_by_fingerprint(uint32_t fingerprint);
     double query_persistence(const std::string& flow_id) const;
-    double query_persistence_by_fingerprint(uint16_t fingerprint) const;
+    double query_persistence_by_fingerprint(uint32_t fingerprint) const;
 
     // Find all persistent flows above threshold
     std::vector<std::string> find_persistent_flows(double threshold = DALTA);
 
     // Sliding window query (periodic)
     bool sliding_window_query(double threshold = DALTA);
-    const std::deque<struct SlidingWindowResult>& get_sliding_window_results() const;
+    const std::deque<SlidingWindowResult>& get_sliding_window_results() const;
 
     // State accessors
     int current_window() const { return current_window_id_; }
@@ -69,7 +80,7 @@ public:
 private:
 
     struct Cell {
-        uint16_t key = 0;
+        uint32_t key = 0;
         bool flag = false;
         uint8_t score = 0;
         uint8_t decay = 0;
@@ -88,7 +99,7 @@ private:
         Cell& at(size_t idx) { return cells.at(idx); }
         const Cell& at(size_t idx) const { return cells.at(idx); }
 
-        int find_cell(uint16_t flow_id) const {
+        int find_cell(uint32_t flow_id) const {
             for (size_t i = 0; i < cells.size(); ++i) {
                 if (!cells[i].empty() && cells[i].key == flow_id) {
                     return static_cast<int>(i);
@@ -119,14 +130,6 @@ private:
         }
     };
 
-    struct SlidingWindowResult {
-        int start_window;
-        int end_window;
-        std::vector<std::string> persistent_flows;
-
-        SlidingWindowResult(int start, int end) : start_window(start), end_window(end) {}
-    };
-
 
     const int num_buckets_;
     const int cells_per_bucket_;
@@ -154,21 +157,21 @@ private:
         return hash_value;
     }
 
-    uint16_t string_to_fingerprint(const std::string& key) const {
+    uint32_t string_to_fingerprint(const std::string& key) const {
         try {
             unsigned long value = std::stoul(key);
-            uint16_t fp = static_cast<uint16_t>(value & 0xFFFF);
-            return (fp == 0) ? 1 : fp;
+            uint32_t fp = static_cast<uint32_t>(value & 0xFFFFFFFF);
+            return (fp == 0) ? 1U : fp;
         } catch (const std::exception&) {
             uint32_t hash_value = murmur_hash(key);
-            uint16_t fp = static_cast<uint16_t>(hash_value & 0xFFFF);
-            return (fp == 0) ? 1 : fp;
+            uint32_t fp = hash_value;
+            return (fp == 0) ? 1U : fp;
         }
     }
 
-    int get_bucket_index(uint16_t fingerprint) const {
-        uint32_t hash_value = static_cast<uint32_t>(fingerprint) * 2654435761U;
-        return static_cast<int>(hash_value % num_buckets_);
+    int get_bucket_index(uint32_t fingerprint) const {
+        uint32_t hash_value = fingerprint * 2654435761U;
+        return static_cast<int>(hash_value % static_cast<uint32_t>(num_buckets_));
     }
 
     double reward_function(int decay) const {
@@ -230,12 +233,12 @@ inline void RekindleSketch::initialize() {
 }
 
 inline bool RekindleSketch::update(const std::string& flow_id) {
-    uint16_t fingerprint = string_to_fingerprint(flow_id);
+    uint32_t fingerprint = string_to_fingerprint(flow_id);
     if (fingerprint == 0) return false;
     return update_by_fingerprint(fingerprint);
 }
 
-inline bool RekindleSketch::update_by_fingerprint(uint16_t fingerprint) {
+inline bool RekindleSketch::update_by_fingerprint(uint32_t fingerprint) {
     int bucket_idx = get_bucket_index(fingerprint);
     Bucket& bucket = *buckets_[bucket_idx];
 
@@ -305,12 +308,12 @@ inline void RekindleSketch::end_window() {
 }
 
 inline double RekindleSketch::query(const std::string& flow_id) {
-    uint16_t fingerprint = string_to_fingerprint(flow_id);
+    uint32_t fingerprint = string_to_fingerprint(flow_id);
     if (fingerprint == 0) return 0.0;
     return query_by_fingerprint(fingerprint);
 }
 
-inline double RekindleSketch::query_by_fingerprint(uint16_t fingerprint) {
+inline double RekindleSketch::query_by_fingerprint(uint32_t fingerprint) {
     int bucket_idx = get_bucket_index(fingerprint);
     const Bucket& bucket = *buckets_[bucket_idx];
 
@@ -324,12 +327,12 @@ inline double RekindleSketch::query_by_fingerprint(uint16_t fingerprint) {
 }
 
 inline double RekindleSketch::query_persistence(const std::string& flow_id) const {
-    uint16_t fingerprint = string_to_fingerprint(flow_id);
+    uint32_t fingerprint = string_to_fingerprint(flow_id);
     if (fingerprint == 0) return 0.0;
     return query_persistence_by_fingerprint(fingerprint);
 }
 
-inline double RekindleSketch::query_persistence_by_fingerprint(uint16_t fingerprint) const {
+inline double RekindleSketch::query_persistence_by_fingerprint(uint32_t fingerprint) const {
     int bucket_idx = get_bucket_index(fingerprint);
     const Bucket& bucket = *buckets_[bucket_idx];
 
@@ -381,7 +384,7 @@ inline bool RekindleSketch::sliding_window_query(double threshold) {
     return true;
 }
 
-inline const std::deque<struct RekindleSketch::SlidingWindowResult>&
+inline const std::deque<RekindleSketch::SlidingWindowResult>&
 RekindleSketch::get_sliding_window_results() const {
     return sliding_window_results_;
 }

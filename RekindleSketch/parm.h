@@ -2,6 +2,7 @@
 #define PARM_H
 
 #include <cstddef>
+#include <string>
 
 //==============================================================================
 // Memory Configuration
@@ -9,7 +10,7 @@
 
 const size_t TOTAL_MEMORY_BYTES = 200 * 1024;  // Total memory budget (200KB)
 const int DEFAULT_N = 55;                       // Number of cells per bucket
-const size_t ESTIMATED_CELL_SIZE = 41;           // Memory per cell (bytes)
+const size_t ESTIMATED_CELL_SIZE = 12;  // Memory per cell (bytes, struct padding included)
 
 // Calculated number of buckets based on memory constraints
 const int CALCULATED_M = static_cast<int>(
@@ -39,6 +40,6 @@ const int S = 100;                   // Query interval (windows between queries)
 //==============================================================================
 
 const int TOTAL_WINDOWS = 0;         // Windows to process (0 = process all)
-const std::string DATA_FOLDER_PATH = "";  // Path to CSV data files
+const std::string DATA_FOLDER_PATH = " ";  // Default: pass path via command line or set here
 
 #endif  // PARM_H
